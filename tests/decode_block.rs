@@ -16,9 +16,9 @@ fn decode_block() {
         ShipResult::GetStatusResultV0(_) => panic!("Should not be GetStatusResultV0"),
         ShipResult::GetBlocksResultV0(r) => {
             if let Some(b) = &r.this_block {
-                println!("Got block: {}", b.block_num);
-                let mut block = Block::new(1, b.block_num, Checksum256::default(), r.clone());
+                let mut block = Block::new(1, b.block_num as u64, Checksum256::default(), r.clone());
                 block.deserialize();
+                println!("Got block: {:#?}", block.block_num);
             } else {
                 panic!("GetBlocksResultV0 without a block");
             }

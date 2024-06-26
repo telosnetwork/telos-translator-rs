@@ -1,12 +1,19 @@
 use std::cmp::Ordering;
+use alloy_consensus::constants::{EMPTY_OMMER_ROOT_HASH, EMPTY_ROOT_HASH};
 use alloy_consensus::Header;
 use antelope::chain::checksum::Checksum256;
 use antelope::chain::Decoder;
+use alloy::primitives::{Bytes, FixedBytes};
+
+use tracing::info;
 use crate::transaction::Transaction;
+
 use crate::types::evm_types::{RawAction, PrintedReceipt, TransferAction, WithdrawAction};
 use crate::types::ship_types::{ActionTrace, GetBlocksResultV0, SignedBlock, TableDelta, TransactionTrace};
 use crate::types::names::*;
 use crate::types::types::NameToAddressCache;
+
+
 
 pub trait BasicTrace {
     fn action_name(&self) -> u64;
@@ -53,16 +60,16 @@ impl BasicTrace for ActionTrace {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Block {
-    pub block_num: u32,
-    block_hash: Checksum256,
-    chain_id: u64,
-    result: GetBlocksResultV0,
-    signed_block: Option<SignedBlock>,
-    block_traces: Option<Vec<TransactionTrace>>,
-    block_deltas: Option<Vec<TableDelta>>,
-    transactions: Vec<Transaction>,
+    pub block_num: u64,
+    pub block_hash: Checksum256,
+    pub chain_id: u64,
+    pub result: GetBlocksResultV0,
+    pub signed_block: Option<SignedBlock>,
+    pub block_traces: Option<Vec<TransactionTrace>>,
+    pub block_deltas: Option<Vec<TableDelta>>,
+    pub transactions: Vec<Transaction>,
 }
 
 pub fn decode_raw(raw: &[u8]) -> RawAction {
@@ -87,7 +94,12 @@ pub fn decode_withdraw(raw: &[u8]) -> WithdrawAction {
 }
 
 impl Block {
-    pub fn new(chain_id: u64, block_num: u32, block_hash: Checksum256, result: GetBlocksResultV0) -> Self {
+    pub fn new(
+        chain_id: u64,
+        block_num: u64,
+        block_hash: Checksum256,
+        result: GetBlocksResultV0
+    ) -> Self {
         Self {
             block_num,
             block_hash,
@@ -156,7 +168,7 @@ impl Block {
         }
     }
 
-    pub async fn generate_evm_data(&mut self, native_to_evm_cache: &NameToAddressCache) {
+    pub async fn generate_evm_data(&mut self, parent_hash: FixedBytes<32>, native_to_evm_cache: &NameToAddressCache) -> Header {
         if self.signed_block.is_none() || self.block_traces.is_none() || self.block_deltas.is_none() {
             panic!("Block::to_evm called on a block with missing data");
         }
@@ -173,20 +185,20 @@ impl Block {
             }
         }
 
-        let block_header = Header {
-            parent_hash: Default::default(),
-            ommers_hash: Default::default(),
+        Header {
+            parent_hash,
+            ommers_hash: EMPTY_OMMER_ROOT_HASH,
             beneficiary: Default::default(),
-            state_root: Default::default(),
-            transactions_root: Default::default(),
-            receipts_root: Default::default(),
+            state_root: EMPTY_ROOT_HASH,
+            transactions_root: EMPTY_ROOT_HASH,
+            receipts_root: EMPTY_ROOT_HASH,
             withdrawals_root: None,
             logs_bloom: Default::default(),
             difficulty: Default::default(),
-            number: 0,
-            gas_limit: 0,
+            number: self.block_num,
+            gas_limit: 0x7fffffff,
             gas_used: 0,
-            timestamp: 0,
+            timestamp: self.signed_block.clone().unwrap().header.header.timestamp as u64,
             mix_hash: Default::default(),
             nonce: Default::default(),
             base_fee_per_gas: None,
@@ -194,10 +206,8 @@ impl Block {
             excess_blob_gas: None,
             parent_beacon_block_root: None,
             requests_root: None,
-            extra_data: Default::default(),
-        };
-        //info!("Block hash: {:?}", block_header.hash_slow());
-
+            extra_data: Bytes::from(self.block_hash.data),
+        }
     }
 }
 

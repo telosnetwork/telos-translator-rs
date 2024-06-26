@@ -27,8 +27,8 @@ use crate::types::types::PriorityQueue;
 // const START_BLOCK: u32 = 300056989;
 
 // Tx decode issue
-const START_BLOCK: u32 = 300062700;
-//const START_BLOCK: u32 = 300_000_000;
+// const START_BLOCK: u32 = 300062700;
+const START_BLOCK: u32 = 244_000_036;
 const STOP_BLOCK: u32 = 301_000_000;
 const CHAIN_ID: u64 = 40;
 
@@ -122,7 +122,12 @@ impl Translator {
                             ShipResult::GetBlocksResultV0(r) => {
                                 unackd_blocks += 1;
                                 if let Some(b) = &r.this_block {
-                                    let block = Block::new(CHAIN_ID, b.block_num, b.block_id, r.clone());
+                                    let block = Block::new(
+                                        CHAIN_ID,
+                                        b.block_num as u64,
+                                        b.block_id,
+                                        r.clone()
+                                    );
                                     block_queue.push(block);
                                     if last_log.elapsed().as_secs_f64() > 10.0 {
                                         info!("Block #{} - rocessed {} blocks/sec", b.block_num, (unlogged_blocks + unackd_blocks) as f64 / last_log.elapsed().as_secs_f64());

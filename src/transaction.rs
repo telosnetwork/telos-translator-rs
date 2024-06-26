@@ -23,7 +23,7 @@ pub fn make_unique_vrs(block_hash_native: Checksum256, sender_address: Address, 
     Signature::from_rs_and_parity(r, s, v).expect("Failed to create signature")
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Transaction {
     LegacySigned(Signed<TxLegacy>, Option<PrintedReceipt>)
 }

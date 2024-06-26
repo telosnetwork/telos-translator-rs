@@ -7,7 +7,7 @@ pub async fn block_deserializer(queue: PriorityQueue, block_map: Arc<DashMap<u32
     loop {
         if let Some(mut block) = queue.pop() {
             block.deserialize();
-            block_map.insert(block.block_num, block);
+            block_map.insert(block.block_num as u32, block);
         }
     }
 }

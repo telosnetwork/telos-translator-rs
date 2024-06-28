@@ -195,7 +195,7 @@ impl Block {
             withdrawals_root: None,
             logs_bloom: Default::default(),
             difficulty: Default::default(),
-            number: self.block_num,
+            number: self.block_num - 36,
             gas_limit: 0x7fffffff,
             gas_used: 0,
             timestamp: self.signed_block.clone().unwrap().header.header.timestamp as u64,

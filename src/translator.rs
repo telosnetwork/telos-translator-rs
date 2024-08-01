@@ -125,7 +125,7 @@ impl Translator {
         for thread_id in 0..self.config.raw_ds_threads.unwrap_or(DEFAULT_RAW_DS_THREADS) {
             let raw_ds_rx = raw_ds_rx.clone();
             let ws_tx = ws_tx.clone();
-            tokio::task::spawn(raw_deserializer(thread_id, self.config.clone(), ship_abi_received.clone(), raw_ds_rx, ws_tx, process_tx.clone(), order_tx.clone()));
+            tokio::task::spawn(raw_deserializer(thread_id, Arc::new(self.config.clone()), ship_abi_received.clone(), raw_ds_rx, ws_tx, process_tx.clone(), order_tx.clone()));
         }
 
         for _ in 0..self.config.block_process_threads.unwrap_or(DEFAULT_BLOCK_PROCESS_THREADS) {

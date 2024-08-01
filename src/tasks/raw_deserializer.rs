@@ -155,7 +155,7 @@ pub async fn raw_deserializer(
                     write_message(ws_tx.clone(), &request).await;
                     orderer_tx.send(BlockOrSkip::Skip(msg.sequence)).await.unwrap();
                 } else {
-                    let (new_unacked, new_unlogged, last_log) = process_ship_msg(
+                    (unackd_blocks, unlogged_blocks, last_log) = process_ship_msg(
                         thread_id,
                         config.clone(),
                         msg,
@@ -166,13 +166,11 @@ pub async fn raw_deserializer(
                         unlogged_blocks,
                         last_log
                     ).await;
-                    unackd_blocks += new_unacked;
-                    unlogged_blocks += new_unlogged;
                 }
             }
         } else {
             if let Some(msg) = raw {
-                let (unackd_blocks, unlogged_blocks, last_log) = process_ship_msg(
+                (unackd_blocks, unlogged_blocks, last_log) = process_ship_msg(
                     thread_id,
                     config.clone(),
                     msg,

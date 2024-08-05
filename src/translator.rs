@@ -109,11 +109,8 @@ impl Translator {
 
         tokio::task::spawn(evm_block_processor(process_rx, order_tx.clone()));
 
-        // Shared queue for order preservation
-        let queue = BinaryHeap::new();
-
         // Start the order-preserving queue task
-        tokio::spawn(order_preserving_queue(order_rx, finalize_tx, queue));
+        tokio::spawn(order_preserving_queue(order_rx, finalize_tx));
 
         // Start the final processing task
         tokio::spawn(final_processor(

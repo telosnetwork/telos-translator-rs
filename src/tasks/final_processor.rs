@@ -32,6 +32,9 @@ pub async fn final_processor(
     let native_to_evm_cache = NameToAddressCache::new(api_client);
 
     while let Some(mut block) = rx.recv().await {
+        if block.block_num % 1000 == 0 {
+            info!("Finalizing block {}, queue: {}", block.block_num, rx.len());
+        }
         unlogged_blocks += 1;
         unlogged_transactions += block.transactions.len();
         debug!("Finalizing block #{}", block.block_num);

@@ -1,5 +1,4 @@
-use alloy::primitives::B256;
-use antelope::api::client::{APIClient, Provider};
+use antelope::api::client::APIClient;
 use antelope::chain::asset::{Asset, Symbol};
 use antelope::chain::checksum::Checksum256;
 use antelope::chain::name::Name;
@@ -28,6 +27,7 @@ impl Provider for MockProvider {
         todo!()
     }
 }
+use telos_translator_rs::types::translator_types::NameToAddressCache;
 
 #[tokio::test]
 async fn test_deposit() {

@@ -41,7 +41,7 @@ impl Transaction {
         // TODO: Set trx_index properly for signed and unsigned transactions
         let tx_raw = &mut raw.tx.as_slice();
 
-        if tx_raw[0] == 0 {
+        if tx_raw[0] >= 0xc0 && tx_raw[0] <= 0xfe {
             let signed_legacy_result = TxLegacy::decode_signed_fields(tx_raw);
             if signed_legacy_result.is_err() {
                 let address = Address::from(

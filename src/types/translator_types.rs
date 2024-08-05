@@ -12,6 +12,7 @@ use std::net::TcpStream;
 use std::sync::{Arc, Mutex};
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
+use tracing::info;
 
 pub type WebsocketTransmitter = SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>;
 pub type WebsocketReceiver = SplitStream<WebSocketStream<MaybeTlsStream<tokio::net::TcpStream>>>;
@@ -47,6 +48,11 @@ impl NameToAddressCache {
 
     pub async fn get(&self, name: u64) -> Option<Address> {
         let cached = self.cache.get(&name);
+        info!(
+            "getting {} cache hit = {:?}",
+            Name::from_u64(name).as_string(),
+            cached.is_some()
+        );
         if let Some(cached) = cached {
             Some(cached)
         } else {
@@ -85,6 +91,12 @@ pub struct PriorityQueue {
     heap: Arc<Mutex<BinaryHeap<Block>>>,
 }
 
+impl Default for PriorityQueue {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PriorityQueue {
     pub fn new() -> Self {
         PriorityQueue {
@@ -105,6 +117,11 @@ impl PriorityQueue {
     pub fn len(&self) -> usize {
         let heap = self.heap.lock().unwrap();
         heap.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        let heap = self.heap.lock().unwrap();
+        heap.is_empty()
     }
 
     pub fn capacity(&self) -> usize {

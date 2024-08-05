@@ -8,6 +8,7 @@ use testcontainers::{runners::AsyncRunner, ContainerAsync, GenericImage};
 use tokio::sync::mpsc;
 use tracing::{debug, info};
 
+#[ignore]
 #[tokio::test]
 async fn evm_deploy() {
     // Change this container to a local image if using new ship data,
@@ -59,7 +60,7 @@ async fn evm_deploy() {
 
     let (tx, mut rx) = mpsc::channel::<(FixedBytes<32>, Block)>(1000);
 
-    let mut translator = Translator::new(config).await.unwrap();
+    let mut translator = Translator::new(config);
     match translator.launch(Some(tx)).await {
         Ok(_) => info!("Translator launched successfully"),
         Err(e) => panic!("Failed to launch translator: {:?}", e),

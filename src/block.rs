@@ -198,7 +198,9 @@ impl Block {
         {
             // Deposit/transfer to EVM
             let transfer_action = decode_transfer(&action.data());
-            if SYSTEM_ACCOUNTS.contains(&transfer_action.from.n) {
+            if transfer_action.to.n != EOSIO_EVM
+                || SYSTEM_ACCOUNTS.contains(&transfer_action.from.n)
+            {
                 return;
             }
 

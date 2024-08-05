@@ -3,6 +3,10 @@ name = "telos-translator-rs"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "ws-bench"
+path = "src/ws_bench.rs"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]

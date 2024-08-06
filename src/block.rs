@@ -5,13 +5,13 @@ use crate::types::names::*;
 use crate::types::ship_types::{
     ActionTrace, ContractRow, GetBlocksResultV0, SignedBlock, TableDelta, TransactionTrace,
 };
-use crate::types::types::NameToAddressCache;
 use alloy::primitives::{Bytes, FixedBytes};
 use alloy_consensus::constants::{EMPTY_OMMER_ROOT_HASH, EMPTY_ROOT_HASH};
 use alloy_consensus::Header;
 use antelope::chain::checksum::Checksum256;
 use antelope::chain::Decoder;
 use std::cmp::Ordering;
+use crate::types::translator_types::NameToAddressCache;
 
 pub trait BasicTrace {
     fn action_name(&self) -> u64;

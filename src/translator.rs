@@ -9,7 +9,6 @@ use antelope::api::default_provider::DefaultProvider;
 use eyre::Result;
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
-use std::collections::BinaryHeap;
 use tokio::sync::mpsc;
 use tokio_tungstenite::connect_async;
 use tracing::error;

@@ -1,12 +1,12 @@
 use crate::rlp::alloy_rlp::TelosTxDecodable;
 use crate::types::evm_types::{PrintedReceipt, RawAction, TransferAction, WithdrawAction};
-use crate::types::types::NameToAddressCache;
 use alloy::primitives::TxKind::Call;
 use alloy::primitives::{Address, Log, Signature, B256, U256};
 use alloy_consensus::{SignableTransaction, Signed, TxLegacy};
 use antelope::chain::checksum::Checksum256;
 use log::info;
 use num_bigint::{BigUint, ToBigUint};
+use crate::types::translator_types::NameToAddressCache;
 
 pub fn make_unique_vrs(
     block_hash_native: Checksum256,

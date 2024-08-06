@@ -40,6 +40,7 @@ pub async fn final_processor(
         unlogged_blocks += 1;
         unlogged_transactions += block.transactions.len();
         debug!("Finalizing block #{}", block.block_num);
+        info!("Finalizing block, transactions {}", block.transactions.len());
 
         let header = block
             .generate_evm_data(parent_hash, config.block_delta, &native_to_evm_cache)

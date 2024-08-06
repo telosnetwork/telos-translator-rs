@@ -5,6 +5,7 @@ use alloy::primitives::TxKind::Call;
 use alloy::primitives::{Address, Log, Signature, B256, U256};
 use alloy_consensus::{SignableTransaction, Signed, TxLegacy};
 use antelope::chain::checksum::Checksum256;
+use log::info;
 use num_bigint::{BigUint, ToBigUint};
 
 pub fn make_unique_vrs(
@@ -42,6 +43,8 @@ impl Transaction {
         let tx_raw = &mut raw.tx.as_slice();
 
         if tx_raw[0] >= 0xc0 && tx_raw[0] <= 0xfe {
+            info!("Transaction found and processed");
+
             let signed_legacy_result = TxLegacy::decode_signed_fields(tx_raw);
             if signed_legacy_result.is_err() {
                 let address = Address::from(

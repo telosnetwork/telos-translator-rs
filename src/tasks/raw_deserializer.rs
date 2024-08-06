@@ -1,5 +1,5 @@
 use crate::block::Block;
-use crate::translator::TranslatorConfig;
+use crate::translator::{write_message, TranslatorConfig};
 use crate::types::ship_types::ShipRequest::{GetBlocksAck, GetStatus};
 use crate::types::ship_types::{
     GetBlocksAckRequestV0, GetBlocksRequestV0, GetStatusRequestV0, ShipRequest, ShipResult,
@@ -7,10 +7,11 @@ use crate::types::ship_types::{
 use crate::types::translator_types::{BlockOrSkip, RawMessage};
 use antelope::chain::Decoder;
 use futures_util::stream::SplitSink;
-use futures_util::SinkExt;
+use std::sync::Arc;
 use std::time::Instant;
 use tokio::net::TcpStream;
 use tokio::sync::mpsc::{Receiver, Sender};
+use tokio::sync::Mutex;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 use tracing::{debug, error, info};
@@ -20,7 +21,7 @@ pub async fn raw_deserializer(
     config: TranslatorConfig,
     ship_abi_received: Arc<Mutex<bool>>,
     raw_ds_rx: Arc<Mutex<Receiver<RawMessage>>>,
-    mut ws_tx: SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>,
+    ws_tx: Arc<Mutex<SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>>>,
     block_deserializer_tx: Sender<Block>,
     orderer_tx: Sender<BlockOrSkip>,
 ) {
@@ -36,7 +37,6 @@ pub async fn raw_deserializer(
         };
         debug!("raw deserializer #{} got message, decoding...", thread_id);
         let mut abi_lock = ship_abi_received.lock().await;
-
         if let Some(msg) = raw {
             if !(*abi_lock) {
                 // TODO: maybe get this working as an ABI again?
@@ -52,9 +52,9 @@ pub async fn raw_deserializer(
                 *abi_lock = true;
 
                 // Send GetStatus request after setting up the ABI
-                let request = &GetStatus(GetStatusRequestV0);
-                ws_tx.send(request.into()).await.unwrap();
                 debug!("GetBlocks request sent");
+                let request = GetStatus(GetStatusRequestV0);
+                write_message(ws_tx.clone(), &request).await;
                 orderer_tx
                     .send(BlockOrSkip::Skip(msg.sequence))
                     .await
@@ -73,17 +73,20 @@ pub async fn raw_deserializer(
                             "GetStatusResultV0 head: {:?} last_irreversible: {:?}",
                             r.head.block_num, r.last_irreversible.block_num
                         );
-                        let request = &ShipRequest::GetBlocks(GetBlocksRequestV0 {
-                            start_block_num: config.start_block,
-                            end_block_num: config.stop_block.unwrap_or(u32::MAX),
-                            max_messages_in_flight: 10000,
-                            have_positions: vec![],
-                            irreversible_only: true, // TODO: Fork handling
-                            fetch_block: true,
-                            fetch_traces: true,
-                            fetch_deltas: true,
-                        });
-                        ws_tx.send(request.into()).await.unwrap();
+                        write_message(
+                            ws_tx.clone(),
+                            &ShipRequest::GetBlocks(GetBlocksRequestV0 {
+                                start_block_num: config.start_block,
+                                end_block_num: config.stop_block.unwrap_or(u32::MAX),
+                                max_messages_in_flight: 10000,
+                                have_positions: vec![],
+                                irreversible_only: true, // TODO: Fork handling
+                                fetch_block: true,
+                                fetch_traces: true,
+                                fetch_deltas: true,
+                            }),
+                        )
+                        .await;
                         orderer_tx
                             .send(BlockOrSkip::Skip(msg.sequence))
                             .await
@@ -118,11 +121,13 @@ pub async fn raw_deserializer(
                             if unackd_blocks > 10 {
                                 //info!("Acking {} blocks", unackd_blocks);
                                 // TODO: Better threading so we don't block reading while we write?
-                                let request = &GetBlocksAck(GetBlocksAckRequestV0 {
-                                    num_messages: unackd_blocks,
-                                });
-                                ws_tx.send(request.into()).await.unwrap();
-
+                                write_message(
+                                    ws_tx.clone(),
+                                    &GetBlocksAck(GetBlocksAckRequestV0 {
+                                        num_messages: unackd_blocks,
+                                    }),
+                                )
+                                .await;
                                 //info!("Blocks acked");
                                 unlogged_blocks += unackd_blocks;
                                 unackd_blocks = 0;

@@ -9,6 +9,7 @@ use antelope::api::default_provider::DefaultProvider;
 use eyre::{eyre, Context, Result};
 use futures_util::future::join_all;
 use futures_util::StreamExt;
+use rocksdb::DB;
 use serde::{Deserialize, Serialize};
 use tokio::sync::{mpsc, oneshot};
 use tokio_tungstenite::connect_async;
@@ -40,6 +41,8 @@ pub struct TranslatorConfig {
     pub block_message_channel_size: Option<usize>,
     pub order_message_channel_size: Option<usize>,
     pub final_message_channel_size: Option<usize>,
+
+    pub rocks_db_path: String,
 }
 
 pub struct Translator {
@@ -55,6 +58,9 @@ impl Translator {
         &mut self,
         output_tx: Option<mpsc::Sender<(FixedBytes<32>, Block)>>,
     ) -> Result<()> {
+        let db = DB::open_default(self.config.rocks_db_path.clone())
+            .wrap_err("Cannot initialize db")?;
+
         let api_client =
             APIClient::<DefaultProvider>::default_provider(self.config.http_endpoint.clone())
                 .map_err(|error| eyre!(error))
@@ -100,7 +106,7 @@ impl Translator {
         let (stop_tx, stop_rx) = oneshot::channel::<()>();
 
         // Start the final processing task
-        let final_processor_handle = tokio::spawn(final_processor(
+        let final_processor_handle = tokio::spawn(final_processor(db,
             self.config.clone(),
             api_client,
             finalize_rx,
@@ -134,7 +140,7 @@ impl Translator {
             order_preserving_queue_handle,
             final_processor_handle,
         ])
-        .await;
+            .await;
 
         result
             .into_iter()

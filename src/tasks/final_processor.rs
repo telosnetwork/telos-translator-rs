@@ -6,13 +6,22 @@ use antelope::api::client::{APIClient, DefaultProvider};
 use eyre::{eyre, Context, Result};
 use hex::encode;
 use std::str::FromStr;
+use rocksdb::{DBWithThreadMode, SingleThreaded};
 use tokio::{
     sync::{mpsc, oneshot},
     time::Instant,
 };
 use tracing::{debug, error, info};
 
+// BlocksShipped represents a struct that is persisted on disk and
+// represents a blocks that was shipped after the finalized block
+struct BlocksShipped {
+    block: Block,
+    last_block_number: u32,
+}
+
 pub async fn final_processor(
+    db: DBWithThreadMode<SingleThreaded>,
     config: TranslatorConfig,
     api_client: APIClient<DefaultProvider>,
     mut rx: mpsc::Receiver<Block>,
@@ -44,6 +53,19 @@ pub async fn final_processor(
             break;
         }
         debug!("Finalizing block #{}", block.block_num);
+
+        // let lib = block.result.last_irreversible;
+        // if let Some(b) = db.get(block.block_num)? {
+            info!("Block already exists. {}", block.block_num);
+        // } else {
+            let block_shiped = BlocksShipped {
+                block: block.clone(),
+                last_block_number: block.block_num.clone(),
+            };
+            info!("Persist a block in a db. {} ", block.block_num);
+            // db.put(block.block_num.clone(), block_shiped).expect("Cannot persist");
+        // }
+
 
         let header = block
             .generate_evm_data(parent_hash, config.block_delta, &native_to_evm_cache)

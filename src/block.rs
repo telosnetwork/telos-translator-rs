@@ -62,12 +62,12 @@ impl BasicTrace for ActionTrace {
 pub struct Block {
     pub sequence: u64,
     pub block_num: u32,
-    block_hash: Checksum256,
-    chain_id: u64,
-    result: GetBlocksResultV0,
-    signed_block: Option<SignedBlock>,
-    block_traces: Option<Vec<TransactionTrace>>,
-    contract_rows: Option<Vec<ContractRow>>,
+    pub block_hash: Checksum256,
+    pub chain_id: u64,
+    pub result: GetBlocksResultV0,
+    pub signed_block: Option<SignedBlock>,
+    pub block_traces: Option<Vec<TransactionTrace>>,
+    pub contract_rows: Option<Vec<ContractRow>>,
     pub transactions: Vec<Transaction>,
 }
 

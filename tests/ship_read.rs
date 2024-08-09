@@ -1,10 +1,11 @@
 use alloy::hex;
 use alloy::primitives::{address, FixedBytes, TxKind, B256, U256};
 use antelope::api::client::{APIClient, DefaultProvider};
+use telos_translator_rs::block::TelosEVMBlock;
 use telos_translator_rs::transaction::Transaction;
 use telos_translator_rs::translator::TranslatorConfig;
 use telos_translator_rs::types::env::TESTNET_GENESIS_CONFIG;
-use telos_translator_rs::{block::Block, translator::Translator};
+use telos_translator_rs::{block::ProcessingEVMBlock, translator::Translator};
 use testcontainers::core::ContainerPort::Tcp;
 use testcontainers::{runners::AsyncRunner, ContainerAsync, GenericImage};
 use tokio::sync::mpsc;
@@ -59,7 +60,7 @@ async fn evm_deploy() {
 
     tracing_subscriber::fmt::init();
 
-    let (tx, mut rx) = mpsc::channel::<(FixedBytes<32>, Block)>(1000);
+    let (tx, mut rx) = mpsc::channel::<TelosEVMBlock>(1000);
 
     let mut translator = Translator::new(config);
     match translator.launch(Some(tx)).await {
@@ -67,8 +68,8 @@ async fn evm_deploy() {
         Err(e) => panic!("Failed to launch translator: {:?}", e),
     }
 
-    while let Some((block_hash, block)) = rx.recv().await {
-        info!("{}:{}", block.block_num, hex::encode(block_hash));
+    while let Some(block) = rx.recv().await {
+        info!("{}:{}", block.block_num, block.block_hash);
 
         match block.block_num {
             50 => {

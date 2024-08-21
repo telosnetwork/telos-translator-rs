@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use crate::block::{ProcessingEVMBlock, TelosEVMBlock};
+use crate::data::Database;
 use crate::tasks::{evm_block_processor, final_processor, raw_deserializer, ship_reader};
 use antelope::api::client::APIClient;
 use antelope::api::default_provider::DefaultProvider;
@@ -36,6 +37,8 @@ pub struct TranslatorConfig {
     pub raw_message_channel_size: Option<usize>,
     pub block_message_channel_size: Option<usize>,
     pub final_message_channel_size: Option<usize>,
+
+    pub data_path: String,
 }
 
 pub struct Translator {
@@ -64,7 +67,8 @@ impl Translator {
 
         let (ws_tx, ws_rx) = ws_stream.split();
 
-        let chain = Arc::new(Mutex::new(Default::default()));
+        let db = Database::open(&self.config.data_path)?;
+        let chain = Arc::new(Mutex::new(db.get_chain()?.unwrap_or_default()));
         // Buffer size here should be the readahead buffer size, in blocks.  This could get large if we are reading
         //  a block range with larges blocks/trxs, so this should be tuned based on the largest blocks we hit
         let (raw_ds_tx, raw_ds_rx) = mpsc::channel::<Vec<u8>>(
@@ -95,6 +99,7 @@ impl Translator {
             output_tx,
             stop_tx,
             chain.clone(),
+            db.clone(),
         ));
 
         let evm_block_processor_handle = tokio::spawn(evm_block_processor(process_rx, finalize_tx));
@@ -105,6 +110,7 @@ impl Translator {
             ws_tx,
             process_tx,
             chain,
+            db,
         ));
 
         let ship_reader_handle = tokio::spawn(ship_reader(ws_rx, raw_ds_tx, stop_rx));

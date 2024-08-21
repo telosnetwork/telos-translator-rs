@@ -1,7 +1,7 @@
 use crate::block::{DecodedRow, TelosEVMBlock};
 use crate::{
     block::ProcessingEVMBlock,
-    data::{self, Chain},
+    data::{self, Chain, Database},
     translator::TranslatorConfig,
     types::translator_types::NameToAddressCache,
 };
@@ -23,6 +23,7 @@ pub async fn final_processor(
     tx: Option<mpsc::Sender<TelosEVMBlock>>,
     stop_tx: oneshot::Sender<()>,
     chain: Arc<Mutex<Chain>>,
+    db: Database,
 ) -> Result<()> {
     let mut last_log = Instant::now();
     let mut unlogged_blocks = 0;
@@ -91,7 +92,7 @@ pub async fn final_processor(
 
         {
             let mut chain = chain.lock().await;
-            let block: data::Block = block.clone().into();
+            let block = data::Block::new(block.block_num, block_hash.to_string());
             // NOTE: Fork handling is not implemented, skip forks
             if chain
                 .last()
@@ -103,6 +104,8 @@ pub async fn final_processor(
             chain
                 .add(block.clone())
                 .expect("Block can be added to the chain");
+            db.put_block(block)
+                .expect("Block can be put to the database");
         }
 
         let block_num = block.block_num;

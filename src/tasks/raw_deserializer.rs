@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::block::ProcessingEVMBlock;
-use crate::data::Chain;
+use crate::data::{Chain, Database};
 use crate::translator::TranslatorConfig;
 use crate::types::ship_types::ShipRequest::{GetBlocksAck, GetStatus};
 use crate::types::ship_types::{
@@ -25,6 +25,7 @@ pub async fn raw_deserializer(
     mut ws_tx: SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>,
     block_deserializer_tx: Sender<ProcessingEVMBlock>,
     chain: Arc<Mutex<Chain>>,
+    db: Database,
 ) -> Result<()> {
     let mut unackd_blocks = 0;
     let mut last_log = Instant::now();
@@ -99,7 +100,9 @@ pub async fn raw_deserializer(
                 {
                     let mut chain = chain.lock().await;
                     let lib = r.last_irreversible.clone().into();
-                    _ = chain.set_lib(lib)?;
+                    if let Some(block) = chain.set_lib(lib)? {
+                        db.put_lib(block.clone())?;
+                    };
                 }
 
                 if let Some(b) = &r.this_block {

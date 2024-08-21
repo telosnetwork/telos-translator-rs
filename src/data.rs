@@ -1,7 +1,10 @@
-use eyre::{eyre, Result};
+use std::sync::Arc;
+
+use eyre::{eyre, Context, Result};
+use rocksdb::{DBWithThreadMode, Direction, IteratorMode, SingleThreaded, DB};
 use serde::{Deserialize, Serialize};
 
-use crate::{block, types::ship_types::BlockPosition};
+use crate::types::ship_types::BlockPosition;
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct Block {
@@ -25,15 +28,6 @@ impl From<BlockPosition> for Block {
         Block {
             number: block_num,
             hash: block_id.to_string(),
-        }
-    }
-}
-
-impl From<block::ProcessingEVMBlock> for Block {
-    fn from(value: block::ProcessingEVMBlock) -> Self {
-        Self {
-            number: value.block_num,
-            hash: value.block_hash.to_string(),
         }
     }
 }
@@ -111,6 +105,89 @@ impl Chain {
 
     pub fn get(&self, block_num: u32) -> Option<&Block> {
         self.blocks.iter().find(|block| block.number == block_num)
+    }
+}
+
+#[derive(Clone)]
+pub struct Database {
+    db: Arc<DBWithThreadMode<SingleThreaded>>,
+}
+
+impl Database {
+    fn lib_key() -> Vec<u8> {
+        "lib".to_string().into()
+    }
+
+    fn block_key(number: u32) -> Vec<u8> {
+        format!("blocks:{number:020}").into()
+    }
+
+    pub fn open(path: &str) -> Result<Self> {
+        Ok(Database {
+            db: Arc::new(
+                DB::open_default(path).wrap_err("Failed to open database for given path")?,
+            ),
+        })
+    }
+
+    pub fn put_lib(&self, block: Block) -> Result<()> {
+        self.db
+            .put(Self::lib_key(), serde_json::to_string(&block)?)
+            .wrap_err("Failed to put lib block into database")
+    }
+
+    pub fn put_block(&self, block: Block) -> Result<()> {
+        self.db
+            .put(
+                Self::block_key(block.number),
+                serde_json::to_string(&block)?,
+            )
+            .wrap_err("Failed to put block into database")
+    }
+
+    pub fn get_block(&self, number: u32) -> Result<Option<Block>> {
+        self.db
+            .get(Self::block_key(number))
+            .map_err(|error| eyre!("Cannot get block: {error}"))?
+            .map(|value| serde_json::from_slice(&value))
+            .transpose()
+            .map_err(|error| eyre!("Cannot parse block JSON: {error}"))
+    }
+
+    pub fn delete_from(&self, block_number: u32) -> Result<()> {
+        let from = Self::block_key(block_number);
+        let max_key = Self::block_key(u32::MAX);
+
+        let mut batch = rocksdb::WriteBatch::default();
+        batch.delete_range(&from, &max_key);
+
+        Ok(self.db.write(batch)?)
+    }
+
+    pub fn get_chain(&self) -> Result<Option<Chain>> {
+        let Some(lib): Option<Block> = self
+            .db
+            .get(Self::lib_key())?
+            .map(|value| serde_json::from_slice(&value))
+            .transpose()?
+        else {
+            return Ok(None);
+        };
+        let start_key = Self::block_key(lib.number);
+        let mode = IteratorMode::From(&start_key, Direction::Forward);
+
+        let mut chain = Chain::default();
+        chain.set_lib(lib)?;
+
+        for item in self.db.iterator(mode) {
+            let (key, value) = item?;
+            if !key.starts_with(b"block") {
+                break;
+            }
+            chain.add(serde_json::from_slice(&value)?)?;
+        }
+
+        Ok(Some(chain))
     }
 }
 

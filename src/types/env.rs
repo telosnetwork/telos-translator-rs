@@ -32,7 +32,9 @@ lazy_static! {
 
         raw_message_channel_size: None,
         block_message_channel_size: None,
-        final_message_channel_size: None
+        final_message_channel_size: None,
+
+        data_path: "temp_db".to_string(),
     };
     pub static ref MAINNET_DEPLOY_CONFIG: TranslatorConfig = TranslatorConfig {
         chain_id: 40,
@@ -54,7 +56,9 @@ lazy_static! {
 
         raw_message_channel_size: None,
         block_message_channel_size: None,
-        final_message_channel_size: None
+        final_message_channel_size: None,
+
+        data_path: "temp_db".to_string(),
     };
     pub static ref TESTNET_GENESIS_CONFIG: TranslatorConfig = TranslatorConfig {
         chain_id: 41,
@@ -76,7 +80,9 @@ lazy_static! {
 
         raw_message_channel_size: None,
         block_message_channel_size: None,
-        final_message_channel_size: None
+        final_message_channel_size: None,
+
+        data_path: "temp_db".to_string(),
     };
     pub static ref TESTNET_DEPLOY_CONFIG: TranslatorConfig = TranslatorConfig {
         chain_id: 41,
@@ -96,6 +102,8 @@ lazy_static! {
 
         raw_message_channel_size: None,
         block_message_channel_size: None,
-        final_message_channel_size: None
+        final_message_channel_size: None,
+
+        data_path: "temp_db".to_string(),
     };
 }

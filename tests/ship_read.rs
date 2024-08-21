@@ -45,6 +45,7 @@ async fn evm_deploy() {
         block_delta: 1,
         ..TESTNET_GENESIS_CONFIG.clone()
     };
+    _ = std::fs::remove_dir_all(&config.data_path);
 
     tracing_subscriber::fmt::init();
 

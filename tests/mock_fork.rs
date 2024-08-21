@@ -69,6 +69,7 @@ async fn mock_fork() {
         block_delta: 0,
         ..TESTNET_GENESIS_CONFIG.clone()
     };
+    _ = std::fs::remove_dir_all(&config.data_path);
 
     let (tx, mut rx) = mpsc::channel::<TelosEVMBlock>(1000);
 

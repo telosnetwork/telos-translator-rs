@@ -5,7 +5,7 @@ use log::debug;
 use tokio::net::TcpStream;
 use tokio::sync::{mpsc, oneshot};
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
-use tracing::info;
+use tracing::{error, info};
 
 pub async fn ship_reader(
     mut ws_rx: SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>,
@@ -15,32 +15,33 @@ pub async fn ship_reader(
     let mut counter: u64 = 0;
 
     loop {
-        // Read the websocket
         let message = tokio::select! {
-            message = ws_rx.next() => message,
-            _ = &mut stop_rx => break
+            Some(message) = ws_rx.next() => message,
+            _ = &mut stop_rx => break,
+            else => break
         };
 
         counter += 1;
-        match message {
-            Some(Ok(msg)) => {
-                debug!("Received message {counter}, sending to raw ds pool...",);
-                // write to the channel
-                if raw_ds_tx.send(msg.into_data()).await.is_err() {
-                    println!("Receiver dropped");
-                    break;
-                }
-                debug!("Sent message {counter} to raw ds pool...");
-            }
-            Some(Err(e)) => {
-                println!("Error receiving message: {}", e);
+
+        let message = match message {
+            Ok(message) => message,
+            Err(error) => {
+                error!("Error receiving message: {error}");
                 break;
             }
-            None => {
-                break;
-            }
+        };
+
+        debug!("Received message {counter}, sending to raw ds pool...",);
+
+        if let Err(error) = raw_ds_tx.send(message.into_data()).await {
+            error!("Receiver dropped: {error}");
+            break;
         }
+
+        debug!("Sent message {counter} to raw ds pool...");
     }
+
     info!("Exiting ship reader...");
+
     Ok(())
 }

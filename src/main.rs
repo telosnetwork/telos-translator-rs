@@ -7,16 +7,16 @@ use tracing::error;
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
+    /// Path to the translator configuration file
     #[arg(long, default_value = "config.toml")]
     config: String,
 }
 
 #[tokio::main]
 async fn main() {
-    let args = Args::parse();
-
     tracing_subscriber::fmt::init();
 
+    let args = Args::parse();
     let config_contents = fs::read_to_string(args.config).expect("Could not read config file");
     let config: TranslatorConfig =
         toml::from_str(&config_contents).expect("Could not parse config as toml");

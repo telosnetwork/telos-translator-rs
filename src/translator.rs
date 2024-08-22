@@ -50,7 +50,11 @@ impl Translator {
         Self { config }
     }
 
-    pub async fn launch(&mut self, output_tx: Option<mpsc::Sender<TelosEVMBlock>>) -> Result<()> {
+    pub async fn launch(
+        &mut self,
+        output_tx: Option<mpsc::Sender<TelosEVMBlock>>,
+        clean: bool,
+    ) -> Result<()> {
         let api_client =
             APIClient::<DefaultProvider>::default_provider(self.config.http_endpoint.clone())
                 .map_err(|error| eyre!(error))
@@ -67,7 +71,11 @@ impl Translator {
 
         let (ws_tx, ws_rx) = ws_stream.split();
 
-        let db = Database::open(&self.config.data_path)?;
+        let db = match clean {
+            true => Database::init(&self.config.data_path)?,
+            false => Database::open(&self.config.data_path)?,
+        };
+
         let chain = Arc::new(Mutex::new(db.get_chain()?.unwrap_or_default()));
         // Buffer size here should be the readahead buffer size, in blocks.  This could get large if we are reading
         //  a block range with larges blocks/trxs, so this should be tuned based on the largest blocks we hit

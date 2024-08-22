@@ -1,8 +1,9 @@
-use std::sync::Arc;
+use std::{fs, path::Path, sync::Arc};
 
 use eyre::{eyre, Context, Result};
 use rocksdb::{DBWithThreadMode, Direction, IteratorMode, SingleThreaded, DB};
 use serde::{Deserialize, Serialize};
+use tracing::info;
 
 use crate::types::ship_types::BlockPosition;
 
@@ -120,6 +121,15 @@ impl Database {
 
     fn block_key(number: u32) -> Vec<u8> {
         format!("blocks:{number:020}").into()
+    }
+
+    pub fn init(path: &str) -> Result<Self> {
+        if Path::new(path).exists() {
+            fs::remove_dir_all(path)
+                .map_err(|error| eyre!("Failed to delete data dir {path}. {error}"))?;
+            info!("Data dir {path} deleted.");
+        }
+        Self::open(path)
     }
 
     pub fn open(path: &str) -> Result<Self> {

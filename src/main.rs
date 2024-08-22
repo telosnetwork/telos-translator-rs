@@ -10,6 +10,9 @@ struct Args {
     /// Path to the translator configuration file
     #[arg(long, default_value = "config.toml")]
     config: String,
+    /// Start translator from clean state
+    #[arg(long, default_value = "false")]
+    clean: bool,
 }
 
 #[tokio::main]
@@ -21,7 +24,7 @@ async fn main() {
     let config: TranslatorConfig =
         toml::from_str(&config_contents).expect("Could not parse config as toml");
 
-    if let Err(e) = Translator::new(config).launch(None).await {
+    if let Err(e) = Translator::new(config).launch(None, args.clean).await {
         error!("Failed to launch translator: {e:?}");
     }
 }

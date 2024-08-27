@@ -107,6 +107,8 @@ pub struct TelosEVMBlock {
     pub new_wallets: Vec<WalletEvents>,
     pub account_rows: Vec<AccountRow>,
     pub account_state_rows: Vec<AccountStateRow>,
+
+    pub is_fork: bool,
 }
 
 pub fn decode<T: Packer + Default>(raw: &[u8]) -> T {

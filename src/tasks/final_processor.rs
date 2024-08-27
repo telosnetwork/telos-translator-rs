@@ -50,6 +50,7 @@ pub async fn final_processor(
         if block.block_num > stop_block {
             break;
         }
+
         debug!("Finalizing block #{}", block.block_num);
         let header = block
             .generate_evm_data(parent_hash, config.block_delta, &native_to_evm_cache)
@@ -89,23 +90,20 @@ pub async fn final_processor(
             last_log = Instant::now();
         }
         // TODO: Fork handling, hashing, all the things...
-
+        let is_fork: bool;
         {
             let mut chain = chain.lock().await;
             let block: Block = Block::new(block.block_num, block_hash.to_string());
 
-            let is_fork = chain
+            is_fork = chain
                 .last()
                 .map(|last| last.number >= block.number)
                 .unwrap_or(false);
-
             chain
                 .add(block.clone(), is_fork)
                 .expect("Forked can be added to the chain");
 
-            // todo if fork detected blocks from db should be deleted
-
-            db.put_block(block.clone())
+            db.put_block(block.clone(), is_fork)
                 .expect("Block can be put to the database");
         }
 
@@ -141,6 +139,7 @@ pub async fn final_processor(
                     }
                 })
                 .collect(),
+	    is_fork,
         };
 
         if let Some(tx) = tx.clone() {
@@ -153,6 +152,7 @@ pub async fn final_processor(
         {
             let chain = chain.lock().await;
             let last_block = chain.last().expect("Last added block exists");
+
             parent_hash = FixedBytes::from_str(last_block.hash.as_str())?;
         }
 

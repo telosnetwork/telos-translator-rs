@@ -77,6 +77,9 @@ async fn mock_fork() {
         Err(e) => panic!("Failed to launch translator: {:?}", e),
     }
 
+    // let db = Database::open(&config.data_path).unwrap();
+    // let chain = db.get_chain().unwrap().unwrap();
+
     while let Some(block) = rx.recv().await {
         info!("{}:{}", block.block_num, block.block_hash);
 

@@ -158,7 +158,12 @@ impl Database {
             .wrap_err("Failed to put lib block into database")
     }
 
-    pub fn put_block(&self, block: Block) -> Result<()> {
+    pub fn put_block(&self, block: Block, is_fork: bool) -> Result<()> {
+        if is_fork {
+            self.delete_from(block.number)
+                .wrap_err("Failed to delete from database")?;
+        }
+
         self.db
             .put(
                 Self::block_key(block.number),

@@ -1,20 +1,21 @@
-use crate::block::{DecodedRow, TelosEVMBlock};
-use crate::{
-    block::ProcessingEVMBlock,
-    data::{self, Chain, Database},
-    translator::TranslatorConfig,
-    types::translator_types::NameToAddressCache,
-};
+use std::{str::FromStr, sync::Arc};
+
 use alloy::primitives::FixedBytes;
 use antelope::api::client::{APIClient, DefaultProvider};
 use eyre::{eyre, Context, Result};
 use hex::encode;
-use std::{str::FromStr, sync::Arc};
 use tokio::{
     sync::{mpsc, oneshot, Mutex},
     time::Instant,
 };
 use tracing::{debug, error, info};
+
+use crate::{
+    block::{DecodedRow, ProcessingEVMBlock, TelosEVMBlock},
+    data::{Block, Chain, Database},
+    translator::TranslatorConfig,
+    types::translator_types::NameToAddressCache,
+};
 
 pub async fn final_processor(
     config: TranslatorConfig,
@@ -50,7 +51,6 @@ pub async fn final_processor(
             break;
         }
         debug!("Finalizing block #{}", block.block_num);
-
         let header = block
             .generate_evm_data(parent_hash, config.block_delta, &native_to_evm_cache)
             .await;
@@ -83,7 +83,7 @@ pub async fn final_processor(
                 blocks_sec,
                 trx_sec
             );
-            //info!("Block map is {} long", block_map.len());
+
             unlogged_blocks = 0;
             unlogged_transactions = 0;
             last_log = Instant::now();
@@ -92,19 +92,20 @@ pub async fn final_processor(
 
         {
             let mut chain = chain.lock().await;
-            let block = data::Block::new(block.block_num, block_hash.to_string());
-            // NOTE: Fork handling is not implemented, skip forks
-            if chain
+            let block: Block = Block::new(block.block_num, block_hash.to_string());
+
+            let is_fork = chain
                 .last()
                 .map(|last| last.number >= block.number)
-                .unwrap_or(false)
-            {
-                continue;
-            }
+                .unwrap_or(false);
+
             chain
-                .add(block.clone())
-                .expect("Block can be added to the chain");
-            db.put_block(block)
+                .add(block.clone(), is_fork)
+                .expect("Forked can be added to the chain");
+
+            // todo if fork detected blocks from db should be deleted
+
+            db.put_block(block.clone())
                 .expect("Block can be put to the database");
         }
 
@@ -148,7 +149,13 @@ pub async fn final_processor(
                 break;
             }
         }
-        parent_hash = block_hash;
+
+        {
+            let chain = chain.lock().await;
+            let last_block = chain.last().expect("Last added block exists");
+            parent_hash = FixedBytes::from_str(last_block.hash.as_str())?;
+        }
+
         if block_num == stop_block {
             debug!("Processed stop block #{block_num}, exiting...");
             stop_tx

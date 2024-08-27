@@ -6,7 +6,6 @@ use tokio::sync::mpsc;
 
 use tracing::info;
 
-use crate::common::test_utils::{ChainDescriptor, JumpInfo};
 use common::test_utils::LeapMockClient;
 use telos_translator_rs::block::TelosEVMBlock;
 use telos_translator_rs::translator::{Translator, TranslatorConfig};
@@ -81,5 +80,12 @@ async fn mock_fork() {
 
     while let Some(block) = rx.recv().await {
         info!("{}:{}", block.block_num, block.block_hash);
+
+        // let db = Database::open(&config.data_path).unwrap();
+        // let chain = db.get_chain().unwrap().unwrap();
+        //
+        // // ensure that block from db exist and has the same hash for the given block number
+        // let block_from_db = chain.get(block.block_num).unwrap();
+        // assert_eq!(block_from_db.hash, block.block_hash.to_string());
     }
 }

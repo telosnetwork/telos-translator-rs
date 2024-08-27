@@ -5,7 +5,7 @@ use rocksdb::{DBWithThreadMode, Direction, IteratorMode, SingleThreaded, DB};
 use serde::{Deserialize, Serialize};
 use tracing::info;
 
-use crate::types::ship_types::BlockPosition;
+use crate::{block::ProcessingEVMBlock, types::ship_types::BlockPosition};
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 pub struct Block {
@@ -28,7 +28,16 @@ impl From<BlockPosition> for Block {
     ) -> Self {
         Block {
             number: block_num,
-            hash: block_id.to_string(),
+            hash: block_id.as_string(),
+        }
+    }
+}
+
+impl From<ProcessingEVMBlock> for Block {
+    fn from(value: ProcessingEVMBlock) -> Self {
+        Self {
+            number: value.block_num,
+            hash: value.block_hash.as_string(),
         }
     }
 }
@@ -73,21 +82,24 @@ impl Chain {
 
     /// Adds processed block.
     /// Returns error if block is not next block of the last processed block.
-    pub fn add(&mut self, block: Block) -> Result<()> {
+    pub fn add(&mut self, block: Block, is_fork: bool) -> Result<()> {
         if self.lib.is_none() {
             return Err(eyre!("Cannot add block if LIB is not set"));
         };
 
-        if let Some(last) = self.blocks.last() {
-            if block.number != last.number + 1 {
-                return Err(eyre!(
-                    "Block {} is not next of the block {}",
-                    block.number,
-                    last.number
-                ));
+        if is_fork {
+            self.blocks.retain(|b| b.number <= block.number);
+        } else {
+            if let Some(last) = self.blocks.last() {
+                if block.number != last.number + 1 {
+                    return Err(eyre!(
+                        "Block {} is not next of the block {}",
+                        block.number,
+                        last.number
+                    ));
+                }
             }
         }
-
         self.blocks.push(block);
         Ok(())
     }
@@ -194,7 +206,7 @@ impl Database {
             if !key.starts_with(b"block") {
                 break;
             }
-            chain.add(serde_json::from_slice(&value)?)?;
+            chain.add(serde_json::from_slice(&value)?, false)?;
         }
 
         Ok(Some(chain))
@@ -219,17 +231,17 @@ mod tests {
         let mut chain = Chain::default();
         assert!(matches!(chain.set_lib(lib0), Ok(Some(_))));
 
-        assert!(chain.add(block1.clone()).is_ok());
-        assert!(chain.add(block3.clone()).is_err());
-        assert!(chain.add(block2.clone()).is_ok());
-        assert!(chain.add(block2.clone()).is_err());
-        assert!(chain.add(block3.clone()).is_ok());
+        assert!(chain.add(block1.clone(), false).is_ok());
+        assert!(chain.add(block3.clone(), false).is_err());
+        assert!(chain.add(block2.clone(), false).is_ok());
+        assert!(chain.add(block2.clone(), false).is_err());
+        assert!(chain.add(block3.clone(), false).is_ok());
 
         assert_eq!(chain.length(), 3);
 
-        assert!(chain.add(block4.clone()).is_ok());
-        assert!(chain.add(block5.clone()).is_ok());
-        assert!(chain.add(block6.clone()).is_ok());
+        assert!(chain.add(block4.clone(), false).is_ok());
+        assert!(chain.add(block5.clone(), false).is_ok());
+        assert!(chain.add(block6.clone(), false).is_ok());
 
         assert_eq!(chain.length(), 6);
 
@@ -237,7 +249,7 @@ mod tests {
 
         assert_eq!(chain.length(), 3);
 
-        assert!(chain.add(block5).is_err());
-        assert!(chain.add(block6).is_err());
+        assert!(chain.add(block5, false).is_err());
+        assert!(chain.add(block6, false).is_err());
     }
 }

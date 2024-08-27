@@ -1,6 +1,6 @@
-use std::collections::HashMap;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use thiserror::Error;
 
 /*
@@ -63,7 +63,10 @@ impl LeapMockClient {
     }
 
     #[allow(dead_code)]
-    pub async fn set_chain(&self, params: ChainDescriptor) -> Result<SetChainResponse, LeapMockError> {
+    pub async fn set_chain(
+        &self,
+        params: ChainDescriptor,
+    ) -> Result<SetChainResponse, LeapMockError> {
         let url = format!("{}/set_chain", self.base_url);
 
         let resp = self

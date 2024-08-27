@@ -1,7 +1,6 @@
+use testcontainers::{ContainerAsync, GenericImage, runners::AsyncRunner};
 use testcontainers::core::ContainerPort::Tcp;
 use testcontainers::core::WaitFor;
-use testcontainers::{runners::AsyncRunner, ContainerAsync, GenericImage};
-
 use tokio::sync::mpsc;
 
 use tracing::info;
@@ -72,7 +71,7 @@ async fn mock_fork() {
 
     let (tx, mut rx) = mpsc::channel::<TelosEVMBlock>(1000);
 
-    let mut translator = Translator::new(config);
+    let mut translator = Translator::new(config.clone());
     match translator.launch(Some(tx), true).await {
         Ok(_) => info!("Translator launched successfully"),
         Err(e) => panic!("Failed to launch translator: {:?}", e),

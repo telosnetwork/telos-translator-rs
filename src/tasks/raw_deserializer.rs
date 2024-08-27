@@ -1,4 +1,7 @@
+use std::sync::Arc;
+
 use crate::block::ProcessingEVMBlock;
+use crate::data::Chain;
 use crate::translator::TranslatorConfig;
 use crate::types::ship_types::ShipRequest::{GetBlocksAck, GetStatus};
 use crate::types::ship_types::{
@@ -10,6 +13,7 @@ use futures_util::stream::SplitSink;
 use futures_util::SinkExt;
 use tokio::net::TcpStream;
 use tokio::sync::mpsc::{Receiver, Sender};
+use tokio::sync::Mutex;
 use tokio::time::Instant;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
@@ -20,6 +24,7 @@ pub async fn raw_deserializer(
     mut raw_ds_rx: Receiver<Vec<u8>>,
     mut ws_tx: SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>,
     block_deserializer_tx: Sender<ProcessingEVMBlock>,
+    chain: Arc<Mutex<Chain>>,
 ) -> Result<()> {
     let mut unackd_blocks = 0;
     let mut last_log = Instant::now();
@@ -41,6 +46,16 @@ pub async fn raw_deserializer(
     ws_tx.send(request.into()).await?;
 
     debug!("Raw deserializer getting next message...");
+
+    let start_block_num = {
+        let chain = chain.lock().await;
+        chain
+            .last()
+            .or(chain.lib())
+            .map(|block| block.number + 1)
+            .unwrap_or(config.start_block)
+    };
+
     while let Some(msg) = raw_ds_rx.recv().await {
         debug!("Raw deserializer got message, decoding...");
 
@@ -57,8 +72,9 @@ pub async fn raw_deserializer(
                     "GetStatusResultV0 head: {:?} last_irreversible: {:?}",
                     r.head.block_num, r.last_irreversible.block_num
                 );
+                info!("Requesting blocks from block {start_block_num}");
                 let request = &ShipRequest::GetBlocks(GetBlocksRequestV0 {
-                    start_block_num: config.start_block,
+                    start_block_num,
                     // Increment stop block value by 1 as bound is exclusive
                     end_block_num: config.stop_block.map(|n| n + 1).unwrap_or(u32::MAX),
                     max_messages_in_flight: 10000,
@@ -72,7 +88,20 @@ pub async fn raw_deserializer(
                 debug!("GetBlocks request sent");
             }
             ShipResult::GetBlocksResultV0(r) => {
+                if r.this_block
+                    .as_ref()
+                    .map(|block| block.block_num < start_block_num)
+                    .unwrap_or(false)
+                {
+                    continue;
+                }
                 unackd_blocks += 1;
+                {
+                    let mut chain = chain.lock().await;
+                    let lib = r.last_irreversible.clone().into();
+                    _ = chain.set_lib(lib)?;
+                }
+
                 if let Some(b) = &r.this_block {
                     let block = ProcessingEVMBlock::new(
                         config.chain_id,

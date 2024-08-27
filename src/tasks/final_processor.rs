@@ -1,15 +1,17 @@
 use crate::block::{DecodedRow, TelosEVMBlock};
 use crate::{
-    block::ProcessingEVMBlock, translator::TranslatorConfig,
+    block::ProcessingEVMBlock,
+    data::{self, Chain},
+    translator::TranslatorConfig,
     types::translator_types::NameToAddressCache,
 };
 use alloy::primitives::FixedBytes;
 use antelope::api::client::{APIClient, DefaultProvider};
 use eyre::{eyre, Context, Result};
 use hex::encode;
-use std::str::FromStr;
+use std::{str::FromStr, sync::Arc};
 use tokio::{
-    sync::{mpsc, oneshot},
+    sync::{mpsc, oneshot, Mutex},
     time::Instant,
 };
 use tracing::{debug, error, info};
@@ -20,6 +22,7 @@ pub async fn final_processor(
     mut rx: mpsc::Receiver<ProcessingEVMBlock>,
     tx: Option<mpsc::Sender<TelosEVMBlock>>,
     stop_tx: oneshot::Sender<()>,
+    chain: Arc<Mutex<Chain>>,
 ) -> Result<()> {
     let mut last_log = Instant::now();
     let mut unlogged_blocks = 0;
@@ -86,9 +89,26 @@ pub async fn final_processor(
         }
         // TODO: Fork handling, hashing, all the things...
 
+        {
+            let mut chain = chain.lock().await;
+            let block: data::Block = block.clone().into();
+            // NOTE: Fork handling is not implemented, skip forks
+            if chain
+                .last()
+                .map(|last| last.number >= block.number)
+                .unwrap_or(false)
+            {
+                continue;
+            }
+            chain
+                .add(block.clone())
+                .expect("Block can be added to the chain");
+        }
+
+        let block_num = block.block_num;
         let completed_block = TelosEVMBlock {
             header,
-            block_num: block.block_num,
+            block_num,
             block_hash,
             transactions: block.transactions,
 
@@ -119,7 +139,6 @@ pub async fn final_processor(
                 .collect(),
         };
 
-        let block_num = block.block_num;
         if let Some(tx) = tx.clone() {
             if let Err(error) = tx.send(completed_block).await {
                 error!("Failed to send finished block to exit stream!! {error}.");

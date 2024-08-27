@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::block::{ProcessingEVMBlock, TelosEVMBlock};
 use crate::tasks::{evm_block_processor, final_processor, raw_deserializer, ship_reader};
 use antelope::api::client::APIClient;
@@ -6,7 +8,7 @@ use eyre::{eyre, Context, Result};
 use futures_util::future::join_all;
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::{mpsc, oneshot, Mutex};
 use tokio_tungstenite::connect_async;
 use tracing::info;
 
@@ -62,6 +64,7 @@ impl Translator {
 
         let (ws_tx, ws_rx) = ws_stream.split();
 
+        let chain = Arc::new(Mutex::new(Default::default()));
         // Buffer size here should be the readahead buffer size, in blocks.  This could get large if we are reading
         //  a block range with larges blocks/trxs, so this should be tuned based on the largest blocks we hit
         let (raw_ds_tx, raw_ds_rx) = mpsc::channel::<Vec<u8>>(
@@ -91,6 +94,7 @@ impl Translator {
             finalize_rx,
             output_tx,
             stop_tx,
+            chain.clone(),
         ));
 
         let evm_block_processor_handle = tokio::spawn(evm_block_processor(process_rx, finalize_tx));
@@ -100,6 +104,7 @@ impl Translator {
             raw_ds_rx,
             ws_tx,
             process_tx,
+            chain,
         ));
 
         let ship_reader_handle = tokio::spawn(ship_reader(ws_rx, raw_ds_tx, stop_rx));

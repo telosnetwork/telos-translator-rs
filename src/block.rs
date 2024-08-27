@@ -82,7 +82,7 @@ pub enum DecodedRow {
 #[derive(Clone)]
 pub struct ProcessingEVMBlock {
     pub block_num: u32,
-    block_hash: Checksum256,
+    pub block_hash: Checksum256,
     chain_id: u64,
     result: GetBlocksResultV0,
     signed_block: Option<SignedBlock>,

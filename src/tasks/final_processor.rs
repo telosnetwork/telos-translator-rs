@@ -90,29 +90,31 @@ pub async fn final_processor(
             last_log = Instant::now();
         }
         // TODO: Fork handling, hashing, all the things...
-        let is_fork: bool;
-        {
-            let mut chain = chain.lock().await;
-            let block: Block = Block::new(block.block_num, block_hash.to_string());
-
-            is_fork = chain
-                .last()
-                .map(|last| last.number >= block.number)
-                .unwrap_or(false);
-            chain
-                .add(block.clone(), is_fork)
-                .expect("Forked can be added to the chain");
-
-            db.put_block(block.clone(), is_fork)
-                .expect("Block can be put to the database");
-        }
 
         let block_num = block.block_num;
+        let transactions = block.transactions;
+        let block: Block = Block::new(block.block_num, block_hash.to_string());
+
+        let is_fork = {
+            let mut chain = chain.lock().await;
+            chain
+                .add(block.clone())
+                .expect("Forked can be added to the chain")
+        };
+
+        if is_fork {
+            db.delete_from(block_num)
+                .expect("Blocks can be deleted from the database");
+        }
+
+        db.put_block(block)
+            .expect("Block can be put to the database");
+
         let completed_block = TelosEVMBlock {
             header,
             block_num,
             block_hash,
-            transactions: block.transactions,
+            transactions,
 
             new_revision: block.new_revision,
             new_gas_price: block.new_gas_price,

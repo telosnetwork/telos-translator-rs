@@ -81,27 +81,32 @@ impl Chain {
     }
 
     /// Adds processed block.
-    /// Returns error if block is not next block of the last processed block.
-    pub fn add(&mut self, block: Block, is_fork: bool) -> Result<()> {
+    /// Returns if fork occured, or error if block is not next block of the last processed block.
+    pub fn add(&mut self, block: Block) -> Result<bool> {
         if self.lib.is_none() {
             return Err(eyre!("Cannot add block if LIB is not set"));
         };
 
-        if is_fork {
-            self.blocks.retain(|b| b.number <= block.number);
-        } else {
-            if let Some(last) = self.blocks.last() {
-                if block.number != last.number + 1 {
-                    return Err(eyre!(
-                        "Block {} is not next of the block {}",
-                        block.number,
-                        last.number
-                    ));
-                }
-            }
+        let Some(last) = self.blocks.last() else {
+            self.blocks.push(block);
+            return Ok(false);
+        };
+
+        if block.number > last.number + 1 {
+            return Err(eyre!(
+                "Block {} is not next of the block {}",
+                block.number,
+                last.number
+            ));
         }
+
+        let is_fork = block.number <= last.number;
+        if is_fork {
+            self.blocks.retain(|b| b.number < block.number);
+        }
+
         self.blocks.push(block);
-        Ok(())
+        Ok(is_fork)
     }
 
     pub fn length(&self) -> usize {
@@ -158,12 +163,7 @@ impl Database {
             .wrap_err("Failed to put lib block into database")
     }
 
-    pub fn put_block(&self, block: Block, is_fork: bool) -> Result<()> {
-        if is_fork {
-            self.delete_from(block.number)
-                .wrap_err("Failed to delete from database")?;
-        }
-
+    pub fn put_block(&self, block: Block) -> Result<()> {
         self.db
             .put(
                 Self::block_key(block.number),
@@ -211,7 +211,9 @@ impl Database {
             if !key.starts_with(b"block") {
                 break;
             }
-            chain.add(serde_json::from_slice(&value)?, false)?;
+            if chain.add(serde_json::from_slice(&value)?)? {
+                return Err(eyre!("No forks expected in db"));
+            }
         }
 
         Ok(Some(chain))
@@ -236,17 +238,17 @@ mod tests {
         let mut chain = Chain::default();
         assert!(matches!(chain.set_lib(lib0), Ok(Some(_))));
 
-        assert!(chain.add(block1.clone(), false).is_ok());
-        assert!(chain.add(block3.clone(), false).is_err());
-        assert!(chain.add(block2.clone(), false).is_ok());
-        assert!(chain.add(block2.clone(), false).is_err());
-        assert!(chain.add(block3.clone(), false).is_ok());
+        assert!(chain.add(block1.clone()).is_ok());
+        assert!(chain.add(block3.clone()).is_err());
+        assert!(chain.add(block2.clone()).is_ok());
+        assert!(chain.add(block2.clone()).is_err());
+        assert!(chain.add(block3.clone()).is_ok());
 
         assert_eq!(chain.length(), 3);
 
-        assert!(chain.add(block4.clone(), false).is_ok());
-        assert!(chain.add(block5.clone(), false).is_ok());
-        assert!(chain.add(block6.clone(), false).is_ok());
+        assert!(chain.add(block4.clone()).is_ok());
+        assert!(chain.add(block5.clone()).is_ok());
+        assert!(chain.add(block6.clone()).is_ok());
 
         assert_eq!(chain.length(), 6);
 
@@ -254,7 +256,7 @@ mod tests {
 
         assert_eq!(chain.length(), 3);
 
-        assert!(chain.add(block5, false).is_err());
-        assert!(chain.add(block6, false).is_err());
+        assert!(chain.add(block5).is_err());
+        assert!(chain.add(block6).is_err());
     }
 }

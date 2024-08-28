@@ -1,10 +1,11 @@
-use testcontainers::{ContainerAsync, GenericImage, runners::AsyncRunner};
 use testcontainers::core::ContainerPort::Tcp;
 use testcontainers::core::WaitFor;
+use testcontainers::{runners::AsyncRunner, ContainerAsync, GenericImage};
 use tokio::sync::mpsc;
 
 use tracing::info;
 
+use crate::common::test_utils::{ChainDescriptor, JumpInfo};
 use common::test_utils::LeapMockClient;
 use telos_translator_rs::block::TelosEVMBlock;
 use telos_translator_rs::translator::{Translator, TranslatorConfig};

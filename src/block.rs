@@ -109,6 +109,7 @@ pub struct TelosEVMBlock {
     pub account_state_rows: Vec<AccountStateRow>,
 
     pub is_fork: bool,
+    pub lib: u32
 }
 
 pub fn decode<T: Packer + Default>(raw: &[u8]) -> T {

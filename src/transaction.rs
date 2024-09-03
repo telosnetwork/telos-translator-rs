@@ -19,6 +19,9 @@ pub fn make_unique_vrs(
     let trx_index_biguint: BigUint = trx_index.to_biguint().unwrap();
     let r_biguint = hash_biguint + trx_index_biguint;
 
+    #[cfg(feature = "bad_sig_padding")]
+    let mut s_bytes = [0x00u8; 32];
+    #[cfg(not(feature = "bad_sig_padding"))]
     let mut s_bytes = [0xffu8; 32];
     s_bytes[..20].copy_from_slice(sender_address.as_slice());
     let r = U256::from_be_slice(r_biguint.to_bytes_be().as_slice());
@@ -101,7 +104,7 @@ impl TelosEVMTransaction {
             native_to_evm_cache
                 .get(action.from.n)
                 .await
-                .expect("Failed to get address")
+                .expect(format!("Failed to get address for account {}", action.from.n.as_string()))
         };
 
         let value = U256::from(action.quantity.amount()) * U256::from(100_000_000_000_000i64);

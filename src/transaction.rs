@@ -101,10 +101,10 @@ impl TelosEVMTransaction {
         let address: Address = if action.memo.starts_with("0x") {
             action.memo.parse().unwrap()
         } else {
-            native_to_evm_cache
-                .get(action.from.n)
-                .await
-                .expect(format!("Failed to get address for account {}", action.from.n.as_string()))
+            native_to_evm_cache.get(action.from.n).await.expect(format!(
+                "Failed to get address for account {}",
+                action.from.n.as_string()
+            ))
         };
 
         let value = U256::from(action.quantity.amount()) * U256::from(100_000_000_000_000i64);

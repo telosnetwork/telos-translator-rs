@@ -3,7 +3,7 @@ use futures_util::stream::SplitStream;
 use futures_util::StreamExt;
 use log::debug;
 use tokio::net::TcpStream;
-use tokio::sync::{mpsc};
+use tokio::sync::mpsc;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 use tracing::info;
 

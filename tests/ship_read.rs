@@ -7,7 +7,7 @@ use testcontainers::core::ContainerPort::Tcp;
 use testcontainers::core::WaitFor;
 use testcontainers::{runners::AsyncRunner, ContainerAsync, GenericImage};
 use tokio::sync::mpsc;
-use tracing::info;
+use log::info;
 
 mod common;
 

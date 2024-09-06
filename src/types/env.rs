@@ -13,7 +13,8 @@ pub const ZERO_HASH_HEX: &str = "00000000000000000000000000000000000000000000000
 lazy_static! {
     pub static ref ZERO_HASH: FixedBytes<32> = FixedBytes::from_str(ZERO_HASH_HEX).unwrap();
     pub static ref MAINNET_GENESIS_CONFIG: TranslatorConfig = TranslatorConfig {
-        chain_id: 40,
+        log_level: "info".to_string(),
+                chain_id: 40,
 
         start_block: 37,
         stop_block: None,
@@ -32,6 +33,8 @@ lazy_static! {
         final_message_channel_size: default_channel_size()
     };
     pub static ref MAINNET_DEPLOY_CONFIG: TranslatorConfig = TranslatorConfig {
+        log_level: "info".to_string(),
+
         chain_id: 40,
 
         start_block: 180698860,
@@ -51,6 +54,7 @@ lazy_static! {
         final_message_channel_size: default_channel_size()
     };
     pub static ref TESTNET_GENESIS_CONFIG: TranslatorConfig = TranslatorConfig {
+        log_level: "info".to_string(),
         chain_id: 41,
 
         start_block: 58,
@@ -70,6 +74,8 @@ lazy_static! {
         final_message_channel_size: default_channel_size()
     };
     pub static ref TESTNET_DEPLOY_CONFIG: TranslatorConfig = TranslatorConfig {
+        log_level: "info".to_string(),
+
         chain_id: 41,
 
         start_block: 136393814,

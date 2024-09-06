@@ -4,7 +4,7 @@ use testcontainers::{runners::AsyncRunner, ContainerAsync, GenericImage};
 
 use tokio::sync::mpsc;
 
-use tracing::info;
+use log::info;
 
 use crate::common::test_utils::{ChainDescriptor, JumpInfo};
 use common::test_utils::LeapMockClient;

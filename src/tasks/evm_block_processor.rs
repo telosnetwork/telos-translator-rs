@@ -1,7 +1,7 @@
 use crate::block::ProcessingEVMBlock;
 use eyre::Result;
 use tokio::sync::mpsc::{Receiver, Sender};
-use tracing::{debug, error, info};
+use log::{debug, error, info};
 
 pub async fn evm_block_processor(
     mut block_rx: Receiver<ProcessingEVMBlock>,

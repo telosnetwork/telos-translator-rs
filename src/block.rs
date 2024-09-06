@@ -18,7 +18,7 @@ use antelope::chain::name::Name;
 use antelope::serializer::Packer;
 use reth_trie_common::root::ordered_trie_root_with_encoder;
 use std::cmp::Ordering;
-use tracing::warn;
+use log::warn;
 
 pub trait BasicTrace {
     fn action_name(&self) -> u64;

@@ -13,7 +13,7 @@ use tokio::{
     sync::{mpsc, oneshot},
     time::Instant,
 };
-use tracing::{debug, error, info};
+use log::{debug, error, info};
 
 pub async fn final_processor(
     config: TranslatorConfig,

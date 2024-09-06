@@ -13,7 +13,7 @@ use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::time::Instant;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
-use tracing::{debug, error, info};
+use log::{debug, error, info};
 
 pub async fn raw_deserializer(
     config: TranslatorConfig,

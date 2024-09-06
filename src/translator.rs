@@ -5,10 +5,10 @@ use antelope::api::default_provider::DefaultProvider;
 use eyre::{eyre, Context, Result};
 use futures_util::future::join_all;
 use futures_util::StreamExt;
+use log::info;
 use serde::{Deserialize, Serialize};
 use tokio::sync::{mpsc, oneshot};
 use tokio_tungstenite::connect_async;
-use tracing::info;
 
 pub fn default_channel_size() -> usize {
     1000
@@ -16,6 +16,7 @@ pub fn default_channel_size() -> usize {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TranslatorConfig {
+    pub log_level: String,
     pub chain_id: u64,
     pub start_block: u32,
     pub stop_block: Option<u32>,

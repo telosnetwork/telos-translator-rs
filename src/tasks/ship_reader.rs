@@ -1,11 +1,11 @@
 use eyre::Result;
 use futures_util::stream::SplitStream;
 use futures_util::StreamExt;
-use log::debug;
 use tokio::net::TcpStream;
 use tokio::sync::{mpsc, oneshot};
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 use tracing::info;
+use tracing::debug;
 
 pub async fn ship_reader(
     mut ws_rx: SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>,

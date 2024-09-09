@@ -4,8 +4,8 @@ use futures_util::StreamExt;
 use tokio::net::TcpStream;
 use tokio::sync::{mpsc, oneshot};
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
-use tracing::info;
 use tracing::debug;
+use tracing::info;
 
 pub async fn ship_reader(
     mut ws_rx: SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>,

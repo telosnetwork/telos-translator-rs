@@ -150,8 +150,7 @@ impl NameToAddressCache {
         account: Name,
         index_position: IndexPosition,
     ) -> GetTableRowsResponse<AccountRow> {
-        let account_result = self
-            .api_client
+        self.api_client
             .v1_chain
             .get_table_rows::<AccountRow>(GetTableRowsParams {
                 code: evm_contract,
@@ -165,8 +164,7 @@ impl NameToAddressCache {
                 show_payer: None,
             })
             .await
-            .unwrap();
-        account_result
+            .unwrap()
     }
 }
 

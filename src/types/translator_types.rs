@@ -1,6 +1,6 @@
 use crate::block::ProcessingEVMBlock;
 use crate::types::evm_types::AccountRow;
-use crate::types::names::EOSIO_EVM;
+use crate::types::names::{ACCOUNT, EOSIO_EVM};
 use alloy::primitives::Address;
 use antelope::api::client::{APIClient, DefaultProvider};
 use antelope::api::v1::structs::{
@@ -53,8 +53,6 @@ impl NameToAddressCache {
             Some(cached)
         } else {
             let evm_contract = Name::from_u64(EOSIO_EVM);
-            // TODO: hardcode this in names.rs for performance
-            let account = Name::new_from_str("account");
             let mut i = 0u8;
             while i <= MAX_RETRY {
                 info!(
@@ -63,7 +61,7 @@ impl NameToAddressCache {
                     i
                 );
                 let account_result = self
-                    .get_account_address(name, evm_contract, account, IndexPosition::TERTIARY)
+                    .get_account_address(name, evm_contract, ACCOUNT, IndexPosition::TERTIARY)
                     .await;
                 if account_result.rows.is_empty() {
                     warn!(
@@ -105,8 +103,6 @@ impl NameToAddressCache {
             Some(cached)
         } else {
             let evm_contract = Name::from_u64(EOSIO_EVM);
-            // TODO: hardcode this in names.rs for performance
-            let account = Name::new_from_str("account");
             let mut i = 0u8;
             while i <= MAX_RETRY {
                 info!(
@@ -116,7 +112,7 @@ impl NameToAddressCache {
                 );
 
                 let account_result = self
-                    .get_account_address(index, evm_contract, account, IndexPosition::PRIMARY)
+                    .get_account_address(index, evm_contract, ACCOUNT, IndexPosition::PRIMARY)
                     .await;
                 if account_result.rows.is_empty() {
                     warn!(

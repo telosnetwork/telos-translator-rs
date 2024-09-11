@@ -55,26 +55,15 @@ impl NameToAddressCache {
             let evm_contract = Name::from_u64(EOSIO_EVM);
             let mut i = 0u8;
             while i <= MAX_RETRY {
-                info!(
-                    "Fetching address {} try {}",
-                    Name::from_u64(name).as_string(),
-                    i
-                );
+                let address = Name::from_u64(name).as_string();
+                info!("Fetching address {address} try {i}",);
                 let account_result = self
                     .get_account_address(name, evm_contract, ACCOUNT, IndexPosition::TERTIARY)
                     .await;
                 if account_result.rows.is_empty() {
-                    warn!(
-                        "Got empty rows for {}, retry attempt {}",
-                        Name::from_u64(name).as_string(),
-                        i
-                    );
+                    warn!("Got empty rows for {address}, retry attempt {i}",);
                     if i == MAX_RETRY {
-                        error!(
-                            "Could not get account after {} attempts for {}",
-                            i,
-                            Name::from_u64(name).as_string()
-                        );
+                        error!("Could not get account after {i} attempts for {address}",);
                         break;
                     }
                     sleep(BASE_DELAY * 2u32.pow(i.as_u32()));
